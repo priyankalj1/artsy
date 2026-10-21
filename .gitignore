@@ -1,0 +1,37 @@
+# OS
+.DS_Store
+**/.DS_Store
+
+# Secrets / local config
+ArtistBackend/env.js
+**/.xcode.env.local
+
+# Dependencies
+**/node_modules/
+ArtistBooking/vendor/bundle/
+ArtistBooking/**/Pods/
+
+# Backend runtime
+ArtistBackend/logs/
+ArtistBackend/uploads/
+*.log
+
+# React Native / mobile build
+ArtistBooking/android/app/build/
+ArtistBooking/android/.gradle/
+ArtistBooking/android/local.properties
+ArtistBooking/ios/build/
+ArtistBooking/ios/Pods/
+*.xcuserstate
+*.hmap
+*.ipa
+.metro-health-check*
+coverage/
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Nested git (monorepo uses root .git only)
+# Do not commit ArtistBooking/.git
