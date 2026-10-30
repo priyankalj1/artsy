@@ -4,6 +4,7 @@ import {
   loadSecureAuth,
   saveSecureAuth,
 } from '../auth/secureStorage';
+import { customToast } from '../utils/toast';
 
 let authToken = null;
 let cachedUser = null;
@@ -61,7 +62,10 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiRequest(path, { method = 'GET', body, token } = {}) {
+export async function apiRequest(
+  path,
+  { method = 'GET', body, token, silent = false } = {},
+) {
   const headers = {
     Accept: 'application/json',
     'Content-Type': 'application/json',
@@ -72,6 +76,12 @@ export async function apiRequest(path, { method = 'GET', body, token } = {}) {
     headers.Authorization = `Bearer ${bearer}`;
   }
 
+  const notify = message => {
+    if (!silent) {
+      customToast(message, 'error');
+    }
+  };
+
   let response;
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
@@ -81,9 +91,10 @@ export async function apiRequest(path, { method = 'GET', body, token } = {}) {
     });
   } catch {
     const err = new ApiError(
-      `Unable to reach server at ${API_BASE_URL}. Check that ArtistBackend is running and your phone is on the same Wi‑Fi.`,
+      'Unable to reach server. Check that the backend is running and your phone is on the same Wi‑Fi.',
       { status: 0 },
     );
+    notify(err.message);
     throw err;
   }
 
@@ -95,10 +106,10 @@ export async function apiRequest(path, { method = 'GET', body, token } = {}) {
   }
 
   if (!response.ok || payload?.success === false) {
-    throw new ApiError(
-      payload?.message || `Request failed (${response.status})`,
-      { status: response.status, payload },
-    );
+    const message =
+      payload?.message || `Request failed (${response.status})`;
+    notify(message);
+    throw new ApiError(message, { status: response.status, payload });
   }
 
   return payload;

@@ -12,12 +12,17 @@ const shouldRevealOtp = () => {
   return environment === "DEV" || environment === "UAT" || environment === "LOCAL";
 };
 
-const isOtpCooldownActive = (otpRequestedAt) => {
-  if (!otpRequestedAt) return false;
+const getOtpCooldownRemainingSeconds = (otpRequestedAt) => {
+  if (!otpRequestedAt) return 0;
   const requestedAt = new Date(otpRequestedAt).getTime();
-  if (Number.isNaN(requestedAt)) return false;
-  return Date.now() - requestedAt < OTP_COOLDOWN_MS;
+  if (Number.isNaN(requestedAt)) return 0;
+  const remainingMs = OTP_COOLDOWN_MS - (Date.now() - requestedAt);
+  if (remainingMs <= 0) return 0;
+  return Math.ceil(remainingMs / 1000);
 };
+
+const isOtpCooldownActive = (otpRequestedAt) =>
+  getOtpCooldownRemainingSeconds(otpRequestedAt) > 0;
 
 const isOtpExpired = (otpExpiry) => {
   if (!otpExpiry) return true;
@@ -28,7 +33,9 @@ module.exports = {
   generateOtp,
   shouldRevealOtp,
   isOtpCooldownActive,
+  getOtpCooldownRemainingSeconds,
   isOtpExpired,
   OTP_TTL_MINUTES,
+  OTP_COOLDOWN_SECONDS: Math.round(OTP_COOLDOWN_MS / 1000),
   OTP_MAX_VERIFY_ATTEMPTS,
 };

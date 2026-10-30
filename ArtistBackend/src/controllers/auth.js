@@ -17,8 +17,10 @@ const {
   generateOtp,
   shouldRevealOtp,
   isOtpCooldownActive,
+  getOtpCooldownRemainingSeconds,
   isOtpExpired,
   OTP_TTL_MINUTES,
+  OTP_COOLDOWN_SECONDS,
   OTP_MAX_VERIFY_ATTEMPTS,
 } = require("../services/otp");
 const {
@@ -183,13 +185,17 @@ const requestOtp = asyncWrapper(async (req, res, next) => {
   }
 
   const existing = await getOtpRequestMeta(phone);
-  if (isOtpCooldownActive(existing?.otp_requested_at)) {
+  const retryAfter = getOtpCooldownRemainingSeconds(existing?.otp_requested_at);
+  if (retryAfter > 0 || isOtpCooldownActive(existing?.otp_requested_at)) {
+    const seconds = retryAfter || OTP_COOLDOWN_SECONDS;
     return next(
       new CustomError(
         null,
-        lang.locale.VLD_OTP_COOLDOWN,
+        `Please wait ${seconds}s before requesting another OTP`,
         StatusCodes.TOO_MANY_REQUESTS,
-        "validation"
+        "validation",
+        false,
+        { retry_after_seconds: seconds }
       )
     );
   }
@@ -197,7 +203,7 @@ const requestOtp = asyncWrapper(async (req, res, next) => {
   const otp = generateOtp();
   await saveUserOtp(phone, otp, OTP_TTL_MINUTES);
 
-  const data = { phone };
+  const data = { phone, retry_after_seconds: OTP_COOLDOWN_SECONDS };
   if (shouldRevealOtp()) {
     data.otp = otp;
   }

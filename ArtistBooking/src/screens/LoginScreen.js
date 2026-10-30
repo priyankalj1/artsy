@@ -17,6 +17,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import { requestOtp } from '../auth/authService';
 import { validatePhone } from '../utils/validation';
+import { customToast } from '../utils/toast';
 
 const { height } = Dimensions.get('window');
 const PHONE_INPUT_ACCESSORY_ID = 'loginPhoneInput';
@@ -33,6 +34,7 @@ const LoginScreen = ({ navigation }) => {
     const phoneResult = validatePhone(mobile);
     if (!phoneResult.valid) {
       setError(phoneResult.error);
+      customToast(phoneResult.error, 'error');
       return;
     }
 
@@ -42,12 +44,18 @@ const LoginScreen = ({ navigation }) => {
 
     if (!result.success) {
       setError(result.error);
+      // API errors already toast from api/client; toast again only if needed
       return;
+    }
+
+    if (result.message) {
+      customToast(result.message, 'success');
     }
 
     navigation.navigate('Otp', {
       phone: result.phone,
       otp: result.otp,
+      retryAfterSeconds: result.retryAfterSeconds ?? 30,
     });
   };
 

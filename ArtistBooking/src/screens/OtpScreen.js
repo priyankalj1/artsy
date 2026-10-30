@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -11,25 +11,63 @@ import {
   InputAccessoryView,
   Platform,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   establishSessionFromAuth,
+  requestOtp,
   verifyOtpCode,
 } from '../auth/authService';
 import { validateOtp } from '../utils/validation';
 import { colors } from '../theme/colors';
+import { customToast } from '../utils/toast';
 
 const { width } = Dimensions.get('window');
 const OTP_INPUT_ACCESSORY_ID = 'otpInput';
+const DEFAULT_COOLDOWN = 30;
 
 export default function OtpScreen({ navigation, route, onAuthenticated }) {
   const phone = route.params?.phone ?? '';
-  const displayedOtp = route.params?.otp ?? '';
+  const initialOtp = route.params?.otp ?? '';
+  const initialCooldown =
+    route.params?.retryAfterSeconds ?? DEFAULT_COOLDOWN;
+
   const [otp, setOtp] = useState('');
+  const [demoOtp, setDemoOtp] = useState(initialOtp);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [cooldown, setCooldown] = useState(initialCooldown);
+
+  useEffect(() => {
+    if (cooldown <= 0) {
+      return undefined;
+    }
+    const timer = setTimeout(() => setCooldown(value => value - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [cooldown]);
+
+  const goNextAfterLogin = (session, userPhone) => {
+    const user = session?.user;
+    const resolvedPhone = user?.phone || userPhone || phone;
+
+    // Parent session update (needed for Main tabs when onboarded)
+    if (onAuthenticated) {
+      onAuthenticated(session);
+    }
+
+    // Not onboarded yet → stay in Auth stack and move forward explicitly.
+    // (Updating session alone does not change the current OTP route.)
+    if (!user?.is_onboarded) {
+      if (!user?.role) {
+        navigation.replace('RoleSelection', { phone: resolvedPhone });
+        return;
+      }
+      navigation.replace('OnboardingStatus');
+    }
+  };
 
   const handleVerify = async () => {
     setError('');
@@ -37,6 +75,7 @@ export default function OtpScreen({ navigation, route, onAuthenticated }) {
     const otpResult = validateOtp(otp);
     if (!otpResult.valid) {
       setError(otpResult.error);
+      customToast(otpResult.error, 'error');
       return;
     }
 
@@ -50,14 +89,50 @@ export default function OtpScreen({ navigation, route, onAuthenticated }) {
     }
 
     Keyboard.dismiss();
+    customToast('Logged in successfully', 'success');
 
     const session = await establishSessionFromAuth(result.user, result.token, {
       onboarding: result.onboarding,
     });
 
-    if (session && onAuthenticated) {
-      onAuthenticated(session);
+    if (!session) {
+      setError('Login succeeded but session could not be created.');
+      customToast('Login succeeded but session could not be created.', 'error');
+      return;
     }
+
+    goNextAfterLogin(session, result.phone || phone);
+  };
+
+  const handleResend = async () => {
+    if (cooldown > 0 || resending || !phone) {
+      if (cooldown > 0) {
+        customToast(
+          `Please wait ${cooldown}s before requesting another OTP`,
+          'error',
+        );
+      }
+      return;
+    }
+
+    setResending(true);
+    setError('');
+    const result = await requestOtp(phone);
+    setResending(false);
+
+    if (!result.success) {
+      setError(result.error);
+      if (result.retryAfterSeconds) {
+        setCooldown(result.retryAfterSeconds);
+      }
+      return;
+    }
+
+    if (result.otp) {
+      setDemoOtp(result.otp);
+    }
+    setCooldown(result.retryAfterSeconds ?? DEFAULT_COOLDOWN);
+    customToast('OTP sent successfully', 'success');
   };
 
   return (
@@ -69,27 +144,30 @@ export default function OtpScreen({ navigation, route, onAuthenticated }) {
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.content}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-            disabled={loading}>
-            <Text style={styles.backText}>← Back</Text>
-          </TouchableOpacity>
+          style={styles.flex}>
+          <ScrollView
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+              disabled={loading || resending}>
+              <Text style={styles.backText}>← Back</Text>
+            </TouchableOpacity>
 
-          <View style={styles.header}>
-            <Text style={styles.title}>Enter OTP</Text>
-            <Text style={styles.subtitle}>
-              We sent a code to +91 {phone || 'your number'}.
-            </Text>
-            {displayedOtp ? (
-              <Text style={styles.demoOtp}>
-                Your OTP is {displayedOtp}.{'\n'}Type it below to continue.
+            <View style={styles.header}>
+              <Text style={styles.title}>Enter OTP</Text>
+              <Text style={styles.subtitle}>
+                We sent a code to +91 {phone || 'your number'}.
               </Text>
-            ) : null}
-          </View>
+              {demoOtp ? (
+                <Text style={styles.demoOtp}>
+                  Your OTP is {demoOtp}.{'\n'}Type it below to continue.
+                </Text>
+              ) : null}
+            </View>
 
-          <View style={styles.form}>
             <Text style={styles.label}>One-time password</Text>
             <TextInput
               value={otp}
@@ -101,7 +179,7 @@ export default function OtpScreen({ navigation, route, onAuthenticated }) {
               placeholderTextColor="rgba(255,255,255,0.45)"
               keyboardType="number-pad"
               maxLength={4}
-              editable={!loading}
+              editable={!loading && !resending}
               style={styles.input}
               inputAccessoryViewID={
                 Platform.OS === 'ios' ? OTP_INPUT_ACCESSORY_ID : undefined
@@ -113,14 +191,30 @@ export default function OtpScreen({ navigation, route, onAuthenticated }) {
             <TouchableOpacity
               style={[styles.button, loading && styles.buttonDisabled]}
               onPress={handleVerify}
-              disabled={loading}>
+              disabled={loading || resending}>
               {loading ? (
                 <ActivityIndicator color={colors.primary} />
               ) : (
                 <Text style={styles.buttonText}>Verify & Continue</Text>
               )}
             </TouchableOpacity>
-          </View>
+
+            <TouchableOpacity
+              onPress={handleResend}
+              disabled={resending || loading}
+              style={styles.resendButton}
+              hitSlop={{ top: 12, bottom: 12, left: 24, right: 24 }}>
+              {resending ? (
+                <ActivityIndicator color={colors.white} />
+              ) : (
+                <Text style={styles.resendText}>
+                  {cooldown > 0
+                    ? `Resend OTP in ${cooldown}s`
+                    : 'Resend OTP'}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
 
@@ -144,15 +238,21 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-  content: {
+  flex: {
     flex: 1,
+  },
+  content: {
+    flexGrow: 1,
     paddingHorizontal: 32,
+    paddingTop: 48,
+    paddingBottom: 40,
     justifyContent: 'center',
   },
   backButton: {
     position: 'absolute',
     top: 8,
     left: 32,
+    zIndex: 2,
   },
   backText: {
     color: colors.white,
@@ -160,7 +260,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   header: {
-    marginBottom: 36,
+    marginBottom: 28,
   },
   title: {
     color: colors.white,
@@ -181,14 +281,11 @@ const styles = StyleSheet.create({
     lineHeight: 28,
     fontWeight: '800',
   },
-  form: {
-    gap: 12,
-  },
   label: {
     color: colors.white,
     fontSize: 16,
     fontWeight: '700',
-    marginTop: 8,
+    marginBottom: 10,
   },
   input: {
     height: 58,
@@ -205,7 +302,7 @@ const styles = StyleSheet.create({
     color: colors.error,
     fontSize: 14,
     fontWeight: '600',
-    marginTop: 4,
+    marginTop: 10,
   },
   button: {
     width: width - 64,
@@ -214,7 +311,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 18,
+    marginTop: 22,
   },
   buttonDisabled: {
     opacity: 0.7,
@@ -223,6 +320,19 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: 20,
     fontWeight: '700',
+  },
+  resendButton: {
+    alignItems: 'center',
+    marginTop: 20,
+    paddingVertical: 14,
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+  resendText: {
+    color: colors.white,
+    fontSize: 17,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
   keyboardAccessory: {
     flexDirection: 'row',

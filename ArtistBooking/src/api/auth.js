@@ -33,8 +33,8 @@ export async function selectRoleApi(role) {
   return result;
 }
 
-export async function fetchMeApi() {
-  return apiRequest('/auth/me');
+export async function fetchMeApi({ silent = false } = {}) {
+  return apiRequest('/auth/me', { silent });
 }
 
 export async function saveOnboardingProgressApi(step, data = {}) {

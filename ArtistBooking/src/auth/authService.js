@@ -89,7 +89,7 @@ export async function restoreSession() {
   const cachedUser = getCachedUser();
 
   try {
-    const result = await fetchMeApi();
+    const result = await fetchMeApi({ silent: true });
     const user = result?.data?.user;
     const onboarding = result?.data?.onboarding;
 
@@ -161,9 +161,14 @@ export async function requestOtp(phone) {
       phone: phoneResult.value,
       otp: result?.data?.otp,
       message: result?.message,
+      retryAfterSeconds: result?.data?.retry_after_seconds ?? 60,
     };
   } catch (error) {
-    return { success: false, error: error.message };
+    return {
+      success: false,
+      error: error.message,
+      retryAfterSeconds: error?.payload?.data?.retry_after_seconds,
+    };
   }
 }
 

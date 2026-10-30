@@ -6,13 +6,15 @@ class CustomError extends Error {
     message = lang.locale.VLD_SOMETHING_WENT_WRONG,
     statusCode = 500,
     type = "ERROR",
-    silentAlert = false
+    silentAlert = false,
+    data = null
   ) {
     super(message);
     this.statusCode = statusCode;
     this.originalError = error;
     this.errorType = type;
     this.silentAlert = silentAlert;
+    this.data = data;
   }
 }
 

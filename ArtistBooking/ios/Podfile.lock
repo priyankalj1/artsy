@@ -27,6 +27,9 @@ PODS:
   - hermes-engine (250829098.0.14):
     - hermes-engine/Pre-built (= 250829098.0.14)
   - hermes-engine/Pre-built (250829098.0.14)
+  - razorpay-core-pod (1.0.3)
+  - razorpay-pod (1.5.2):
+    - razorpay-core-pod (= 1.0.3)
   - RCTDeprecation (0.86.0)
   - RCTRequired (0.86.0)
   - RCTSwiftUI (0.86.0)
@@ -1472,6 +1475,29 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - react-native-razorpay (3.0.0):
+    - hermes-engine
+    - razorpay-pod
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - react-native-safe-area-context (5.8.0):
     - hermes-engine
     - RCTRequired
@@ -2348,6 +2374,7 @@ DEPENDENCIES:
   - React-microtasksnativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
   - React-mutationobservernativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/mutationobserver`)
   - react-native-image-picker (from `../node_modules/react-native-image-picker`)
+  - react-native-razorpay (from `../node_modules/react-native-razorpay`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
   - react-native-splash-screen (from `../node_modules/react-native-splash-screen`)
   - react-native-worklets-core (from `../node_modules/react-native-worklets-core`)
@@ -2395,6 +2422,11 @@ DEPENDENCIES:
   - VisionCamera (from `../node_modules/react-native-vision-camera`)
   - VisionCameraCropper (from `../node_modules/vision-camera-cropper`)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
+
+SPEC REPOS:
+  trunk:
+    - razorpay-core-pod
+    - razorpay-pod
 
 EXTERNAL SOURCES:
   AsyncStorage:
@@ -2482,6 +2514,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/mutationobserver"
   react-native-image-picker:
     :path: "../node_modules/react-native-image-picker"
+  react-native-razorpay:
+    :path: "../node_modules/react-native-razorpay"
   react-native-safe-area-context:
     :path: "../node_modules/react-native-safe-area-context"
   react-native-splash-screen:
@@ -2582,6 +2616,8 @@ SPEC CHECKSUMS:
   BVLinearGradient: 880f91a7854faff2df62518f0281afb1c60d49a3
   FBLazyVector: b3e7ad108f0d882e30445c5527d774e3fd432f3d
   hermes-engine: 5a07d3502f894089ec55c83a8ba8f1739e9bb5f0
+  razorpay-core-pod: ef0309dbf8e3e5a1330f6cad89dcf9226d8ef758
+  razorpay-pod: a9cb6e158aee8754053b147008eff6b4897789c8
   RCTDeprecation: 2a74a2c57675e64419bd89078efde81f7c1de90b
   RCTRequired: 30451112e6fef4e6f31b4e7eee0845156e35e4b0
   RCTSwiftUI: 5aaf0b07e747ba749dc6acc94d8bd41eea4b570f
@@ -2620,6 +2656,7 @@ SPEC CHECKSUMS:
   React-microtasksnativemodule: 03752e60738a797bb49f4d6cb0291dfa398099b8
   React-mutationobservernativemodule: 2e568e13c98bd185fe83266795233fa7ad2cbc19
   react-native-image-picker: 2146157d5d37a34c2063d1d2ed01081b56d0b87b
+  react-native-razorpay: 04b35abf85449cca5e4dd9b74959ff7e9c8359c1
   react-native-safe-area-context: c1eb308f4b36372a4de4b3bdaa8ed695ec3dd461
   react-native-splash-screen: 4312f786b13a81b5169ef346d76d33bc0c6dc457
   react-native-worklets-core: ac6ca44cc93388211aa7da8977227f9ef8bb1faf

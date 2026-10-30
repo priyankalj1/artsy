@@ -34,6 +34,7 @@ const errorHandlerMiddleware = (err, req, res, next) => {
       message: err.message,
       statusCode: err.statusCode,
       silent: err.silentAlert,
+      ...(err.data ? { data: err.data } : {}),
     });
   }
 
